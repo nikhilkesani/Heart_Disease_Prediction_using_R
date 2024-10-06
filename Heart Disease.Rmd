@@ -1,0 +1,573 @@
+---
+title: "Can We Reliably Predict Heart Disease in Individuals: A Regression Analysis?"
+author: "Nikhil Kesani and Bharath Chandra Pulijala"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+df <- read.csv("D:\\Heart Disease\\6.1 heart-disease.csv")
+```
+
+
+```{r}
+tail(df)
+
+```
+```{r}
+head(df)
+```
+# Description of Attributes
+
+• Age—age of patient in years, sex—(1 = male; 0 = female).
+• Cp—chest pain type.
+• Trestbps—resting blood pressure (in mm Hg on admission to the hospital). The normal range is 120/80 (if you have a normal blood pressure reading, it is fine, but if it is a little higher than it should be, you should try to lower it. Make healthy changes to your lifestyle).
+• Chol—serum cholesterol shows the amount of triglycerides present. Triglycerides are another lipid that can be measured in the blood. It should be less than 170 mg/dL (may differ in different Labs).
+• Fbs—fasting blood sugar larger than 120 mg/dl (1 true). Less than 100 mg/dL (5.6 mmol/L) is normal, and 100 to 125 mg/dL (5.6 to 6.9 mmol/L) is considered prediabetes.
+• Restecg—resting electrocardiographic results.
+• Thalach—maximum heart rate achieved. The maximum heart rate is 220 minus your age.
+• Exang—exercise-induced angina (1 yes). Angina is a type of chest pain caused by reduced blood flow to the heart. Angina is a symptom of coronary artery disease.
+• Oldpeak—ST depression induced by exercise relative to rest.
+• Slope—the slope of the peak exercise ST segment.
+• Ca—number of major vessels (0–3) colored by fluoroscopy.
+• Thal—no explanation provided, but probably thalassemia (3 normal; 6 fixed defects; 7 reversible defects).
+• Target (T)—no disease = 0 and disease = 1
+
+```{r}
+table(df$target)
+```
+
+```{r}
+target_counts <- table(df$target)
+
+# Define colors for the bars
+colors <- c("salmon", "lightblue")
+
+# Plot the bar plot
+barplot(target_counts, col = colors, main = "Target Counts", xlab = "Target", ylab = "Count")
+
+```
+```{r}
+str(df)
+```
+```{r}
+# Assuming df is your dataframe
+na_counts <- colSums(is.na(df))
+print(na_counts)
+```
+
+```{r}
+table(df$sex)
+```
+
+```{r}
+table(df$target, df$sex)
+```
+
+
+```{r}
+# Create contingency table
+cross_tab <- table(df$target, df$sex)
+
+# Plot the contingency table
+barplot(cross_tab, beside = TRUE, col = c("salmon", "lightblue"), 
+          main = "Heart Disease Frequency for Sex",
+        xlab = "0=No Disease, 1=Disease",
+        ylab = "Amount",
+        legend.text = c("Female", "Male"),
+        args.legend = list(x = "topright", bty = "n"),
+        names.arg = c("No Disease", "Disease"),
+        ylim = c(0, max(cross_tab) + 5),
+        cex.axis = 0.8,
+        cex.names = 0.8,
+        cex.lab = 0.8)
+```
+
+```{r}
+# Set the size of the plot
+options(repr.plot.width=10, repr.plot.height=6)
+
+# Scatter plot with positive example
+plot(df$age[df$target == 1], df$thalach[df$target == 1], col = 'salmon', 
+     xlab = 'Age', ylab = 'Max Heart Rate')
+
+# Add points for negative example
+points(df$age[df$target == 0], df$thalach[df$target == 0], col = 'lightblue')
+
+# Add title and legend
+title('Age vs Max Heart Rate for Heart Disease')
+legend('topright', legend = c('Disease', 'No Disease'), col = c('salmon', 'lightblue'), pch = 1)
+```
+
+```{r}
+hist(df$age)
+```
+
+
+```{r}
+# Assuming df$cp is the column representing chest pain type and df$target is the target variable
+
+# Create the contingency table
+result <- table(df$cp, df$target)
+
+# Define colors
+colors <-  c("salmon", "lightblue","red","green")
+
+# Plot the bar plot
+barplot(result, beside = TRUE, col = colors, main = "Heart Disease Frequency Per Chest Pain Type",
+        xlab = "Disease", ylab = "Frequency", legend.text = c("pain 0","pain 1","pain 2","pain 3"),
+        args.legend = list(x = "topright", bty = "n"), ylim = c(0, max(result) + 10), las = 1)
+
+```
+
+
+
+
+```{r}
+correlation_matrix <- cor(df)
+correlation_matrix
+
+```
+
+```{r}
+# Load the corrplot package
+library(corrplot)
+
+# Compute the correlation matrix
+corr_matrix <- cor(df)
+
+
+corrplot(corr_matrix, method = "circle")
+
+```
+```{r}
+# Load necessary libraries
+library(ggplot2)
+
+# Box plots for numerical variables
+numerical_vars <- c("age", "trestbps", "chol", "thalach", "oldpeak")
+
+# Create box plots for each numerical variable
+numerical_plots <- lapply(numerical_vars, function(var) {
+  ggplot(data = df, aes(x = as.factor(target), y = !!sym(var))) +
+    geom_boxplot(fill = "lightblue", color = "blue") +
+    labs(title = paste("Box Plot of", var, "by Target"),
+         x = "Target", y = var)
+})
+
+
+# Bar plots for categorical variables
+categorical_vars <- c("sex", "cp", "fbs", "restecg", "exang", "slope", "ca", "thal")
+
+# Create bar plots for each categorical variable
+categorical_plots <- lapply(categorical_vars, function(var) {
+  ggplot(data = df, aes(x = as.factor(target), y = ..count.., fill = as.factor(!!sym(var)))) +
+    geom_bar(position = "dodge", color = "black") +
+    labs(title = paste("Bar Plot of", var, "by Target"),
+         x = "Target", y = "Count", fill = var)
+})
+# Print box plots for numerical variables
+print(numerical_plots)
+
+# Print bar plots for categorical variables
+print(categorical_plots)
+
+```
+
+
+
+
+
+```{r}
+ library(ggplot2)
+ library(GGally)
+# Plot ggpairs for numerical variables
+ggpairs(df[, numerical_vars])
+
+# Plot ggpairs for categorical variables
+ggpairs(df[, categorical_vars])
+```
+
+
+```{r}
+x <- df[, -which(names(df) == "target")]
+y <- df$target
+
+# Set the seed for reproducibility
+set.seed(42)
+
+# Split the data into training and testing sets
+indices <- sample(1:nrow(x), size = 0.8 * nrow(x), replace = FALSE)
+x_train <- x[indices, ]
+x_test <- x[-indices, ]
+y_train <- y[indices]
+y_test <- y[-indices]
+
+y_train <- as.factor(y_train)
+y_test <- as.factor(y_test)
+
+data_train <- data.frame(x_train, y_train)
+```
+
+
+```{r}
+# Define different formulas with interaction terms
+formula1 <- as.formula("y_train ~ (age + sex +trestbps + chol + fbs + restecg +cp+thalach + exang + oldpeak + slope + ca + thal)")
+formula2 <- as.formula("y_train ~ .+ cp :fbs +cp:thalach")
+
+# Fit logistic models with interaction terms
+logistic_model_interaction1 <- glm(formula1, family = binomial(link = "logit"), data = data_train)
+logistic_model_interaction2 <- glm(formula2, family = binomial(link = "logit"), data = data_train)
+logistic_model_interaction3 <-step(logistic_model_interaction2,direction = "backward",trace=FALSE)
+
+# Print summaries of the models
+summary(logistic_model_interaction1)
+summary(logistic_model_interaction2)
+summary(logistic_model_interaction3)
+
+```
+Backward Selection Model has lowest AIC VAlue so it chosen as final model.
+
+```{r}
+logistic_model <- glm(formula = y_train ~ sex + cp + trestbps + restecg + thalach + 
+    exang + oldpeak + ca + thal, family = binomial(link = "logit"), 
+    data = data_train)
+summary_logistic_model <- summary(logistic_model)
+
+# Extract coefficients from the summary
+coefficients <- summary_logistic_model$coefficients
+
+# Calculate the odds ratio (OR) by exponentiating the coefficients
+odds_ratios <- exp(coefficients[, "Estimate"])
+
+# Display the odds ratios
+print(odds_ratios)
+```
+
+
+```{r}
+# Load necessary libraries
+library(ROCR)
+predictions <- predict(logistic_model, newdata = data.frame(x_test, y_test), type = "response")
+
+# Create prediction object for ROC curve
+prediction_obj <- prediction(predictions, y_test)
+
+library(pROC)
+roc_obj <- roc(y_test, predictions)
+
+# Find the threshold maximizing Youden's J statistic
+optimal_idx <- which.max(roc_obj$sensitivities + roc_obj$specificities - 1)
+optimal_threshold <- roc_obj$thresholds[optimal_idx]
+
+# Print the optimal threshold value
+cat("Optimal Threshold Value:", optimal_threshold, "\n")
+# Create performance object
+performance_obj <- performance(prediction_obj, "tpr", "fpr")
+
+# Plot ROC curve
+plot(performance_obj, main = "ROC Curve for Logistic Regression", col = "blue", lwd = 2)
+
+# Calculate AUC
+auc_value <- performance(prediction_obj, "auc")@y.values[[1]]
+
+# Print AUC value
+cat("AUC value:", auc_value, "\n")
+
+# Add diagonal reference line
+abline(a = 0, b = 1, lty = 2, col = "red")
+
+# Add legend
+legend("bottomright", legend = paste("AUC =", round(auc_value, 2)), col = "blue", lwd = 2)
+
+```
+
+
+```{r}
+# Assuming 'new_data' is the DataFrame containing future data
+predictions <- predict(logistic_model, newdata = data.frame(x_test, y_test), type = "response")
+
+predicted_labels <- ifelse(predictions > 0.84, 1, 0)
+predicted_labels
+
+# Assuming 'y_test' contains the actual labels for the testing data
+
+# Calculate accuracy
+accuracy <- mean(predicted_labels == y_test)
+
+# Print the accuracy
+cat("Logistic Regression Accuracy:", accuracy)
+
+```
+
+
+```{r}
+# Define your formula
+#formula <- as.formula("y_train ~ (age + sex + cp + trestbps + chol + fbs + restecg + thalach + exang + oldpeak + slope + ca + thal)")
+
+# Create the model matrix for back sel.
+modM <- with(data_train, model.matrix(~ sex + cp + trestbps + restecg + thalach + 
+    exang + oldpeak + ca + thal))
+  
+
+# Display the first few rows of the model matrix
+head(modM)
+
+```
+
+
+```{r}
+library(class)
+library(randomForest)
+# Fit random forest model
+rf_model <- randomForest(x_train, y_train, method = 'rf')
+rf_model
+
+# Evaluate the Random Forest model on the test set
+predictions_rf <- predict(rf_model, newdata = x_test)
+
+accuracy_rf <- sum(predictions_rf == y_test) / length(y_test)
+cat("Random Forest Accuracy:", accuracy_rf, "\n")
+
+
+knn_model <- knn(train = x_train, test = x_test, cl = y_train, k = 5)
+knn_model
+# Evaluate the KNN model
+accuracy_knn <- sum(knn_model == y_test) / length(y_test)
+cat("KNN Accuracy:", accuracy_knn, "\n")
+ 
+```
+
+```{r}
+# Get predicted probabilities for positive class from the Random Forest model
+rf_probabilities <- predict(rf_model, newdata = x_test, type = "prob")[, 2]
+
+# Create ROC object
+roc_obj_rf <- roc(y_test, rf_probabilities)
+
+# Plot ROC curve
+plot(roc_obj_rf, main = "ROC Curve for Random Forest", col = "blue", lwd = 2, legacy.axes = TRUE)
+
+# Add diagonal reference line
+abline(a = 0, b = 1, lty = 2, col = "red")
+
+# Calculate AUC
+auc_rf <- auc(roc_obj_rf)
+
+# Print AUC value
+cat("AUC for Random Forest:", auc_rf, "\n")
+
+# Add legend
+legend("bottomright", legend = paste("AUC =", round(auc_rf, 2)), col = "blue", lwd = 2)
+
+
+```
+Cross-validation and hyperparameter tuning
+
+```{r}
+# Load necessary libraries
+library(caret)
+# Set up cross-validation
+set.seed(123) # For reproducibility
+cv <- trainControl(method = "cv", number = 10)
+
+# Define the formula for logistic regression
+formula <- as.formula("y_train ~ sex + cp + trestbps + restecg + thalach + exang + oldpeak + ca + thal")
+
+# Fit logistic regression model with cross-validation
+logistic_model_cv <- train(formula, data = data_train,
+                        method = "glm", family = binomial(link = "logit"),
+                        trControl = cv)
+logistic_accuracy <- logistic_model_cv$results$Accuracy
+print(logistic_model_cv)
+
+
+# Fit k-nearest neighbors model with cross-validation
+knn_model <- train(x = x_train, y = y_train, method = "knn",
+                   trControl = cv, tuneLength = 10)
+knn_accuracy <- knn_model$results$Accuracy
+
+
+# Fit random forest model with cross-validation
+rf_model <- train(x = x_train, y = y_train, method = "rf",
+                  trControl = cv, tuneLength = 10)
+rf_accuracy <- rf_model$results$Accuracy
+print(rf_model)
+
+# Print accuracies
+cat("Logistic Regression Accuracy (CV):", logistic_accuracy, "\n")
+cat("KNN Accuracy (CV):", knn_accuracy, "\n")
+cat("Random Forest Accuracy (CV):", rf_accuracy, "\n")
+
+logistic_accuracy <- max(logistic_model_cv$results$Accuracy)
+knn_accuracy <- max(knn_model$results$Accuracy)
+rf_accuracy <- max(rf_model$results$Accuracy)
+
+# Compare models
+model_compare_cv <- data.frame(
+  Model = c("Logistic Regression", "Random Forest","KNN"),
+  Accuracy = c(logistic_accuracy, rf_accuracy,knn_accuracy)
+)
+
+# Print model accuracies
+print(model_compare_cv)
+
+# Plot the bar graph
+barplot(model_compare_cv$Accuracy, names.arg = model_compare_cv$Model, col = "lightblue", 
+        main = "Model Comparison with Cross-validation", ylab = "Accuracy")
+
+```
+
+Cross-validation is a technique used to estimate the performance of a model on unseen data. It involves splitting the training data into multiple subsets, training the model on a subset, and evaluating it on the remaining data. The reported accuracy after cross-validation (0.84) represents an estimate of how well the model is expected to perform on new, unseen data.
+
+The accuracy obtained after cross-validation (0.84) is likely a more reliable estimate of the model's performance on unseen data. Cross-validation helps to reduce the risk of overfitting by providing a more robust evaluation of the model's generalization ability.
+
+
+```{r}
+# Load necessary libraries
+library(caret)
+
+# Create empty vectors to store metrics
+logistic_metrics <- c(NA, NA, NA, NA)
+knn_metrics <- c(NA, NA, NA, NA)
+rf_metrics <- c(NA, NA, NA, NA)
+
+# Calculate metrics for Logistic Regression
+tryCatch({
+
+  logistic_predicted_labels <- ifelse(predictions > 0.84, 1, 0)
+  
+  # Confusion matrix for logistic regression
+  logistic_conf_matrix <- confusionMatrix(factor(logistic_predicted_labels), factor(y_test))
+  
+  # Extract precision, recall, and F1-score for logistic regression
+  logistic_metrics[1] <- logistic_conf_matrix$byClass["Pos Pred Value"]
+  logistic_metrics[2] <- logistic_conf_matrix$byClass["Sensitivity"]
+  logistic_metrics[3] <- logistic_conf_matrix$byClass["F1"]
+  
+})
+
+# Calculate metrics for KNN
+tryCatch({
+  # Predictions on the test data for KNN model
+  knn_predictions <- knn(train = x_train, test = x_test, cl = y_train, k = 5)
+  
+  # Confusion matrix for KNN
+  knn_conf_matrix <- confusionMatrix(factor(knn_predictions), factor(y_test))
+  
+  # Extract precision, recall, and F1-score for KNN
+  knn_metrics[1] <- knn_conf_matrix$byClass["Pos Pred Value"]
+  knn_metrics[2] <- knn_conf_matrix$byClass["Sensitivity"]
+  knn_metrics[3] <- knn_conf_matrix$byClass["F1"]
+  
+})
+
+# Calculate metrics for Random Forest
+tryCatch({
+  # Predictions on the test data for Random Forest model
+  rf_predictions <- predict(rf_model, newdata = x_test)
+  
+  # Confusion matrix for Random Forest
+  rf_conf_matrix <- confusionMatrix(factor(rf_predictions), factor(y_test))
+  
+  # Extract precision, recall, and F1-score for Random Forest
+  rf_metrics[1] <- rf_conf_matrix$byClass["Pos Pred Value"]
+  rf_metrics[2] <- rf_conf_matrix$byClass["Sensitivity"]
+  rf_metrics[3] <- rf_conf_matrix$byClass["F1"]
+  
+})
+
+# Create a data frame to store the metrics
+metrics_df <- data.frame(
+  Model = c("Logistic Regression", "KNN", "Random Forest"),
+  Precision = c(logistic_metrics[1], knn_metrics[1], rf_metrics[1]),
+  Recall = c(logistic_metrics[2], knn_metrics[2], rf_metrics[2]),
+  F1_score = c(logistic_metrics[3], knn_metrics[3], rf_metrics[3])
+)
+# Print confusion matrix for Logistic Regression
+print("Confusion Matrix for Logistic Regression:")
+print(logistic_conf_matrix)
+
+# Print confusion matrix for Random Forest
+print("Confusion Matrix for Random Forest:")
+print(rf_conf_matrix)
+
+# Print confusion matrix for KNN
+print("Confusion Matrix for KNN:")
+print(knn_conf_matrix)
+
+# Print the metrics data frame
+print(metrics_df)
+```
+In medical applications, high sensitivity is often crucial, especially when the goal is to avoid missing any positive cases of heart disease. Missing a positive case could mean failing to diagnose and treat someone who has heart disease.
+
+Logistic Regression offers the highest sensitivity (0.9667) in your results, meaning it is most effective at correctly identifying individuals with heart disease.Sensitivity, also known as recall or true positive rate, is a measure of a model's ability to correctly identify positive instances in a dataset. In the context of predicting heart disease, sensitivity measures the proportion of actual heart disease cases that the model correctly identifies as having heart disease.
+
+While the Random Forest model may have higher overall performance based on AUC, specificity, and balanced accuracy, but we  are right to consider Logistic Regression if we focus is on maximizing sensitivity to minimize false negatives.
+
+A high sensitivity value indicates that the model is good at identifying actual cases of heart disease, which is important in medical diagnosis to ensure that as many individuals with the condition as possible are correctly diagnosed and can receive appropriate treatment.
+
+
+
+
+```{r}
+# Load necessary libraries
+library(caret)
+
+# Fit random forest model
+rf_model <- train(x = x_train, y = y_train, method = "rf", trControl = cv, tuneLength = 10)
+
+# Get feature importance
+rf_feature_importance <- varImp(rf_model)
+
+# Print feature importance
+print(rf_feature_importance)
+
+# Visualize feature importance
+plot(rf_feature_importance, top = 10, main = "Top 10 Features by Importance")
+
+
+```
+The RF model considers "cp" (Chest Pain Type) as the most important feature for predicting heart disease, followed by "thalach" (Maximum Heart Rate Achieved) and "oldpeak" (ST Depression Induced by Exercise Relative to Rest). These findings provide insights into which features are most influential in the model's predictions.
+
+#Feature importance
+```{r}
+# Define your logistic regression model
+model <- glm(y_train ~ sex + cp + trestbps + restecg + thalach + 
+    exang + oldpeak + ca + thal, family = binomial(link = "logit"), data = data_train)
+
+# Fit the logistic regression model
+fit <- model
+
+# Extract coefficients from the fitted model
+coefficients <- coef(fit)
+coefficients
+
+# Create a named vector with feature names as keys and coefficients as values
+feature_dict <- as.vector(coefficients[-1])  # Exclude the intercept term
+names(feature_dict) <- names(coefficients)[-1]  # Use column names as keys
+
+# Assuming you have your feature_dict in R as a named vector
+feature_names <- names(feature_dict)
+feature_values <- abs(unname(feature_dict))  # Take absolute values for magnitude
+
+# Create a dataframe
+feature_df <- data.frame(Feature = feature_names, Importance = feature_values)
+
+# Sort the dataframe by importance
+feature_df <- feature_df[order(feature_df$Importance, decreasing = TRUE), ]
+feature_df
+
+# Plot the bar plot
+barplot(height = feature_df$Importance, 
+        names.arg = feature_df$Feature, 
+        main = "Feature Importance (Logistic Regression)", 
+        xlab = "Importance", 
+        ylab = "Feature", 
+        col = "lightblue", 
+        horiz = TRUE)
+
+
+
+```
+
